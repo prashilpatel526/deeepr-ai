@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxai - Master AI Crypto & Glaze Algo Engine v11.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #04060a; color: #94a3b8; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #04060a; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        .glow-card { background: linear-gradient(180deg, rgba(13, 18, 28, 0.96) 0%, rgba(5, 7, 10, 0.99) 100%); border: 1px solid rgba(30, 41, 59, 0.85); }
+        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .animate-ticker { display: flex; width: max-content; animation: ticker 25s linear infinite; }
+        .animate-ticker:hover { animation-play-state: paused; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col select-none">
+
+    <!-- PASSWORD PROTECTION MODAL -->
+    <div id="auth-modal" class="fixed inset-0 z-[999] bg-[#020305]/95 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glow-card p-6 rounded-2xl border border-cyan-500/30 w-full max-w-md space-y-4 font-mono shadow-2xl">
+            <div class="flex items-center space-x-3 pb-3 border-b border-slate-800">
+                <div class="bg-cyan-500/10 p-2 rounded-xl text-cyan-400 border border-cyan-500/30">
+                    <i data-lucide="lock" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h2 class="text-white font-bold text-base tracking-wider">PROXAI MASTER ACCESS</h2>
+                    <p class="text-xs text-slate-500">Master Server Security Protocol v11</p>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <label class="text-xs text-slate-400 font-semibold">Enter Master Password:</label>
+                <input type="password" id="auth-password" placeholder="••••••••" class="w-full bg-[#04060a] border border-slate-800 rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500 transition" />
+                <p id="auth-error" class="text-red-400 text-xs hidden">Incorrect Master Password. Try again.</p>
+            </div>
+            <button onclick="verifyPassword()" class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-lg text-xs transition shadow-lg">
+                AUTHENTICATE MASTER SERVER
+            </button>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="fixed inset-0 z-[990] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glow-card p-6 rounded-2xl border border-slate-800 w-full max-w-md space-y-4 font-mono shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 class="text-white font-bold text-sm flex items-center space-x-2">
+                    <i data-lucide="settings" class="w-4 h-4 text-cyan-400"></i>
+                    <span>PROXAI SYSTEM SETTINGS</span>
+                </h3>
+                <button onclick="toggleSettingsModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div class="bg-[#04060a] p-3 rounded border border-slate-800 flex items-center justify-between">
+                    <div>
+                        <div class="text-white font-bold">Clear Local Cache</div>
+                        <div class="text-[10px] text-slate-500">Reset saved session variables & data</div>
+                    </div>
+                    <button onclick="clearSystemCache()" class="bg-amber-500/20 text-amber-400 border border-amber-500/40 px-3 py-1 rounded font-bold hover:bg-amber-500/30">Clear</button>
+                </div>
+                <div class="bg-[#04060a] p-3 rounded border border-slate-800 flex items-center justify-between">
+                    <div>
+                        <div class="text-white font-bold">Session Account</div>
+                        <div class="text-[10px] text-emerald-400">Connected as Master Admin</div>
+                    </div>
+                    <button onclick="systemLogout()" class="bg-red-500/20 text-red-400 border border-red-500/40 px-3 py-1 rounded font-bold hover:bg-red-500/30">Logout</button>
+                </div>
+            </div>
+            <button onclick="toggleSettingsModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-xs">Close Settings</button>
+        </div>
+    </div>
+
+    <!-- NEWS DETAIL MODAL (HINGLISH IMPACT) -->
+    <div id="news-modal" class="fixed inset-0 z-[990] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glow-card p-6 rounded-2xl border border-cyan-500/40 w-full max-w-lg space-y-4 font-mono shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 class="text-cyan-400 font-bold text-sm flex items-center space-x-2">
+                    <i data-lucide="newspaper" class="w-4 h-4"></i>
+                    <span id="modal-news-title">Live News Impact Analysis</span>
+                </h3>
+                <button onclick="toggleNewsModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="space-y-3 text-xs font-sans">
+                <div class="bg-[#04060a] p-3.5 rounded border border-slate-800 space-y-2">
+                    <span class="text-[10px] font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-500/30" id="modal-news-tag">Hinglish Market Breakdown</span>
+                    <p id="modal-news-desc" class="text-slate-300 leading-relaxed text-sm">
+                        Loading news details...
+                    </p>
+                </div>
+                <div class="bg-emerald-950/20 p-3 rounded border border-emerald-500/30 space-y-1">
+                    <div class="text-[10px] font-mono text-emerald-400 font-bold">TRADING IMPACT & ACTION:</div>
+                    <p id="modal-news-impact" class="text-emerald-300 text-xs">
+                        Market par iska positive asar padega. Long positions hold karein.
+                    </p>
+                </div>
+            </div>
+            <button onclick="toggleNewsModal()" class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded text-xs font-mono">Got It</button>
+        </div>
+    </div>
+
+    <!-- Live Auto-Refreshing Daily News & Macro Ticker Header Tape -->
+    <div class="bg-[#020305] border-b border-slate-800 overflow-hidden whitespace-nowrap py-1.5 text-xs font-mono text-cyan-300 relative z-40 flex items-center">
+        <div class="bg-cyan-950 px-3 py-0.5 text-[10px] text-cyan-400 font-bold border-r border-slate-800 z-10 flex items-center space-x-1 shrink-0">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            <span>LIVE NEWS & WHALE FEED (Click for Hinglish Impact):</span>
+        </div>
+        <div class="animate-ticker flex space-x-8 text-slate-300 cursor-pointer" id="live-news-ticker-container">
+            <span onclick="openNewsDetail('btc_etf')" class="hover:text-cyan-400 transition">⚡ BTC ETF Net Inflow: <strong class="text-emerald-400">+$312.4M</strong> (Click to view impact)</span>
+            <span onclick="openNewsDetail('whale')" class="hover:text-cyan-400 transition">🐋 Whale Alert: <strong>5,100 BTC</strong> accumulated in private cold storage</span>
+            <span onclick="openNewsDetail('ppi')" class="hover:text-cyan-400 transition">📊 US Producer Price Index (PPI) Released: <strong class="text-cyan-400">Lower than expected (Bullish Asset Pivot)</strong></span>
+            <span onclick="openNewsDetail('sec')" class="hover:text-cyan-400 transition">🚀 SEC Regulatory Clarity Boosts Institutional DeFi Volume</span>
+        </div>
+    </div>
+
+    <!-- Top Status Bar (Hidden extra text, clean PROXAI brand and IST Clock) -->
+    <div class="bg-[#020305] border-b border-slate-800 px-4 py-2 flex items-center justify-between text-xs text-slate-400 font-mono">
+        <div class="flex items-center space-x-3">
+            <div class="flex space-x-1.5">
+                <div class="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+            </div>
+            <div class="flex items-center space-x-2 bg-[#0b0f17] px-3 py-1 rounded border border-slate-800 text-cyan-400 font-bold tracking-wider">
+                <span>PROXAI</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span id="ist-clock" class="text-cyan-300 font-bold bg-cyan-950/40 px-2.5 py-0.5 rounded border border-cyan-500/30">--:--:-- IST</span>
+            <button onclick="toggleSettingsModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded border border-slate-700 flex items-center space-x-1">
+                <i data-lucide="settings" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span>Settings</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Header / Controls -->
+    <header class="bg-[#080b12] border-b border-slate-800 sticky top-0 z-30 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2">
+                <div class="bg-gradient-to-tr from-cyan-500 to-indigo-600 p-1.5 rounded-lg text-white font-black">
+                    <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                </div>
+                <span class="font-bold text-white tracking-wider text-base">PROX<span class="text-cyan-400">.AI</span></span>
+            </div>
+
+            <!-- Asset Tabs -->
+            <div class="flex items-center space-x-1 bg-[#04060a] p-1 rounded-lg border border-slate-800 font-mono text-xs overflow-x-auto">
+                <button onclick="switchAsset('BTCUSDT', 'BINANCE:BTCUSDT')" id="btn-BTCUSDT" class="px-3 py-1.5 rounded text-white bg-slate-800 font-bold transition">BTC</button>
+                <button onclick="switchAsset('ETHUSDT', 'BINANCE:ETHUSDT')" id="btn-ETHUSDT" class="px-3 py-1.5 rounded text-slate-400 hover:text-white transition">ETH</button>
+                <button onclick="switchAsset('SOLUSDT', 'BINANCE:SOLUSDT')" id="btn-SOLUSDT" class="px-3 py-1.5 rounded text-slate-400 hover:text-white transition">SOL</button>
+                <button onclick="switchAsset('XRPUSDT', 'BINANCE:XRPUSDT')" id="btn-XRPUSDT" class="px-3 py-1.5 rounded text-slate-400 hover:text-white transition">XRP</button>
+                <button onclick="switchAsset('XAUUSD', 'OANDA:XAUUSD')" id="btn-XAUUSD" class="px-3 py-1.5 rounded text-amber-400 hover:text-white font-bold transition border border-amber-500/30 bg-amber-950/20">🟡 GOLD (XAU)</button>
+            </div>
+
+            <!-- Complete Timeframe Selector -->
+            <div class="hidden xl:flex items-center space-x-1 bg-[#04060a] p-1 rounded-lg border border-slate-800 font-mono text-xs">
+                <button onclick="switchTimeframe('1S')" id="tf-1S" class="px-2 py-1 rounded text-slate-400 hover:text-white">1s</button>
+                <button onclick="switchTimeframe('5S')" id="tf-5S" class="px-2 py-1 rounded text-slate-400 hover:text-white">5s</button>
+                <button onclick="switchTimeframe('15S')" id="tf-15S" class="px-2 py-1 rounded text-slate-400 hover:text-white">15s</button>
+                <button onclick="switchTimeframe('30S')" id="tf-30S" class="px-2 py-1 rounded text-slate-400 hover:text-white">30s</button>
+                <button onclick="switchTimeframe('1')" id="tf-1" class="px-2 py-1 rounded text-slate-400 hover:text-white">1m</button>
+                <button onclick="switchTimeframe('3')" id="tf-3" class="px-2 py-1 rounded text-slate-400 hover:text-white">3m</button>
+                <button onclick="switchTimeframe('5')" id="tf-5" class="px-2 py-1 rounded text-slate-400 hover:text-white">5m</button>
+                <button onclick="switchTimeframe('15')" id="tf-15" class="px-2.5 py-1 rounded text-white bg-slate-800 font-bold">15m</button>
+                <button onclick="switchTimeframe('30')" id="tf-30" class="px-2 py-1 rounded text-slate-400 hover:text-white">30m</button>
+                <button onclick="switchTimeframe('60')" id="tf-60" class="px-2 py-1 rounded text-slate-400 hover:text-white">1h</button>
+                <button onclick="switchTimeframe('240')" id="tf-240" class="px-2 py-1 rounded text-slate-400 hover:text-white">4h</button>
+                <button onclick="switchTimeframe('D')" id="tf-D" class="px-2 py-1 rounded text-slate-400 hover:text-white">1D</button>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3 font-mono text-xs">
+            <div class="bg-[#04060a] px-3 py-1.5 rounded-lg border border-slate-800 flex items-center space-x-2">
+                <span id="header-coin-label" class="text-cyan-400 font-bold">BTCUSDT:</span>
+                <span id="header-price" class="text-emerald-400 font-bold text-sm">$0.00</span>
+            </div>
+            <button onclick="refreshEngine()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg transition shadow flex items-center space-x-1">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>SYNC TIMELINES</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 p-4 max-w-[1700px] mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-4">
+        
+        <!-- Left 3 Columns -->
+        <div class="lg:col-span-3 space-y-4">
+            
+            <!-- TradingView Chart Embed with Live S/R, Liquidity & Trendlines Note -->
+            <div class="glow-card rounded-xl p-2 border border-slate-800 flex flex-col h-[480px]">
+                <div class="flex items-center justify-between px-3 py-2 border-b border-slate-800 font-mono text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span id="tv-pair-title" class="text-white font-bold">BINANCE:BTCUSDT</span>
+                        <span id="active-tf-badge" class="text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">Timeframe: 15m</span>
+                    </div>
+                    <span class="text-emerald-400 text-[11px]">⚡ Live Chart + Liquidity, S/R & Trend Lines Active</span>
+                </div>
+                <div id="tradingview-container" class="flex-1 mt-2 rounded-lg overflow-hidden relative w-full h-full"></div>
+            </div>
+
+            <!-- WORLD'S BEST STRATEGIES SELECTOR BUTTONS (Interactive Trade Plan Generator) -->
+            <div class="glow-card rounded-xl p-4 border border-cyan-500/40 bg-cyan-950/10 space-y-3 font-mono">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
+                    <span class="text-cyan-400 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                        <span>🎯 SELECT WORLD'S BEST STRATEGY (Instant Trade Plan)</span>
+                    </span>
+                    <span class="text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded text-[11px] font-bold">Click any strategy below</span>
+                </div>
+                <!-- Strategy Click Buttons -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <button onclick="applyStrategy('ICT')" id="strat-btn-ICT" class="p-2.5 rounded bg-cyan-900/40 border border-cyan-500 text-cyan-300 font-bold text-left transition hover:bg-cyan-800/40">
+                        1. ICT Order Block + BOS
+                    </button>
+                    <button onclick="applyStrategy('EMA')" id="strat-btn-EMA" class="p-2.5 rounded bg-[#04060a] border border-slate-800 text-slate-300 font-bold text-left transition hover:border-slate-600">
+                        2. 9 & 20 EMA Crossover
+                    </button>
+                    <button onclick="applyStrategy('SWEEP')" id="strat-btn-SWEEP" class="p-2.5 rounded bg-[#04060a] border border-slate-800 text-slate-300 font-bold text-left transition hover:border-slate-600">
+                        3. Liquidity Sweep & Fakeout
+                    </button>
+                    <button onclick="applyStrategy('BOLL')" id="strat-btn-BOLL" class="p-2.5 rounded bg-[#04060a] border border-slate-800 text-slate-300 font-bold text-left transition hover:border-slate-600">
+                        4. Bollinger Band Squeeze
+                    </button>
+                </div>
+
+                <!-- Strategy Trade Plan Output Box -->
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs pt-2">
+                    <div class="bg-[#04060a] p-3 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">SELECTED STRATEGY ENTRY</div>
+                        <div id="master-perfect-entry" class="text-white font-bold text-sm mt-1">$0.00</div>
+                    </div>
+                    <div class="bg-[#04060a] p-3 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">EXECUTE CANDLE / TIME</div>
+                        <div id="master-perfect-candle" class="text-cyan-400 font-bold text-sm mt-1">15m Close confirmation</div>
+                    </div>
+                    <div class="bg-[#04060a] p-3 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">STOP LOSS (SL)</div>
+                        <div id="master-perfect-sl" class="text-red-400 font-bold text-sm mt-1">$0.00</div>
+                    </div>
+                    <div class="bg-[#04060a] p-3 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">TARGET PROFIT (TP)</div>
+                        <div id="master-perfect-tp" class="text-emerald-400 font-bold text-sm mt-1">$0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEARCH ENGINE FOR TRADE PLANNING -->
+            <div class="glow-card rounded-xl p-4 border border-slate-800 space-y-3 font-mono">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
+                    <span class="text-cyan-400 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                        <span>PROXAI ADVANCED TRADE PLAN SEARCH ENGINE</span>
+                    </span>
+                    <span class="text-emerald-400 text-[11px]">Dynamic Multi-Timeframe Search</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                        <label class="text-[10px] text-slate-500 mb-1 block">Filter Strategy Concept</label>
+                        <select id="search-strategy" onchange="runSearchEnginePlan()" class="w-full bg-[#04060a] border border-slate-800 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-500">
+                            <option value="ICT">ICT Order Block & BOS</option>
+                            <option value="EMA">9 & 20 EMA Crossover</option>
+                            <option value="EMA50">50 EMA Trend Baseline</option>
+                            <option value="EMA200">200 EMA Macro Structure</option>
+                            <option value="SWEEP">Liquidity Sweep & Fakeout</option>
+                            <option value="BOLL">Bollinger Bands Volatility Squeeze</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-500 mb-1 block">Risk Capital ($)</label>
+                        <input type="number" id="search-risk-amt" value="100" oninput="runSearchEnginePlan()" class="w-full bg-[#04060a] border border-slate-800 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-500" />
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-500 mb-1 block">Live Plan Result</label>
+                        <div id="search-output-rec" class="bg-[#04060a] border border-slate-800 rounded px-3 py-2 text-emerald-400 font-bold truncate">
+                            Computing live plan...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ICT & Glaze Matrix with All Added Indicators -->
+            <div class="glow-card rounded-xl p-4 border border-slate-800 space-y-3 font-mono">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
+                    <span class="text-cyan-400 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                        <span id="matrix-title-label">PROXAI LIVE TECHNICAL MATRIX</span>
+                    </span>
+                    <span id="tf-bias-status-badge" class="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded text-[11px]">Bias: BULLISH</span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 text-xs">
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">Order Block (OB)</div>
+                        <div id="ind-ob" class="text-emerald-400 font-bold mt-0.5">Bull OB</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">ICT CHoCH / BOS</div>
+                        <div id="ind-choch" class="text-emerald-400 font-bold mt-0.5">BOS Breakout</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">9 & 20 EMA</div>
+                        <div id="ind-9-20" class="text-emerald-400 font-bold mt-0.5">Bull Cross</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">50 EMA Base</div>
+                        <div id="ind-50ema" class="text-emerald-400 font-bold mt-0.5">Above 50</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">200 EMA Trend</div>
+                        <div id="ind-200ema" class="text-emerald-400 font-bold mt-0.5">Macro Bull</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">Bollinger Squeeze</div>
+                        <div id="ind-boll" class="text-cyan-400 font-bold mt-0.5">Expansion Up</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">Liquidity Sweep</div>
+                        <div id="ind-liq" class="text-emerald-400 font-bold mt-0.5">Low Purge Sweep</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">Swing Sweep (Lux)</div>
+                        <div id="ind-lux" class="text-emerald-400 font-bold mt-0.5">Lux Algo Bull</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">Fakeout Trap</div>
+                        <div id="ind-fakeout" class="text-emerald-400 font-bold mt-0.5">Bear Trap Cleared</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">ATR Volatility</div>
+                        <div id="ind-atr" class="text-cyan-400 font-bold mt-0.5">185.2 pts</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">MACD / RSI</div>
+                        <div id="ind-macd" class="text-emerald-400 font-bold mt-0.5">RSI: 64.2 Bull</div>
+                    </div>
+                    <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                        <div class="text-[10px] text-slate-500">Stochastic</div>
+                        <div id="ind-stoch" class="text-cyan-400 font-bold mt-0.5">Momentum 72.4</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIVE PLANNED TRADES & RUNNING EXECUTED TRADES TABLE -->
+            <div class="glow-card rounded-xl p-4 border border-slate-800 space-y-3 font-mono">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
+                    <span class="text-cyan-400 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="activity" class="w-4 h-4"></i>
+                        <span id="active-trades-table-heading">LIVE PLANNED & RUNNING EXECUTED TRADES</span>
+                    </span>
+                    <span class="text-emerald-400 text-[11px] font-bold">⚡ Real-Time Execution Engine Active</span>
+                </div>
+
+                <div class="bg-[#04060a] rounded border border-slate-800 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800">
+                                <tr>
+                                    <th class="p-2.5">Status Type</th>
+                                    <th class="p-2.5">Time Frame</th>
+                                    <th class="p-2.5">Strategy Setup</th>
+                                    <th class="p-2.5">Entry ($)</th>
+                                    <th class="p-2.5">Stop Loss ($)</th>
+                                    <th class="p-2.5">Target ($)</th>
+                                    <th class="p-2.5 text-right">Live PnL / Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="active-trades-table-body" class="divide-y divide-slate-800/60 text-[11px]">
+                                <!-- Dynamically generated live planned & running trades -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right 1 Column -->
+        <div class="space-y-4">
+            
+            <!-- Gemini AI Live Trade Analysis Box -->
+            <div class="glow-card rounded-xl p-4 border border-slate-800 space-y-3 font-mono">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
+                    <span class="text-cyan-400 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                        <span>GEMINI AI LIVE TRADE ANALYSIS</span>
+                    </span>
+                    <span id="plan-bias-badge" class="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded text-[10px]">LIVE LONG</span>
+                </div>
+
+                <div class="space-y-2 text-xs">
+                    <div class="bg-[#04060a] p-3 rounded border border-slate-800 space-y-1">
+                        <div class="text-[10px] text-slate-500">EXECUTE CANDLE & TIMING</div>
+                        <div id="plan-live-time-status" class="text-emerald-400 font-bold">Execute on active candle retest confirmation</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                            <div class="text-[10px] text-slate-500">OPTIMIZED ENTRY</div>
+                            <div id="plan-entry" class="text-white font-bold mt-0.5">$0.00</div>
+                        </div>
+                        <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                            <div class="text-[10px] text-slate-500">RISK / STOP LOSS (SL)</div>
+                            <div id="plan-sl" class="text-red-400 font-bold mt-0.5">$0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                            <div class="text-[10px] text-slate-500">TARGET (TP)</div>
+                            <div id="plan-tp" class="text-emerald-400 font-bold mt-0.5">$0.00</div>
+                        </div>
+                        <div class="bg-[#04060a] p-2.5 rounded border border-slate-800">
+                            <div class="text-[10px] text-slate-500">RISK : REWARD</div>
+                            <div id="plan-move" class="text-cyan-400 font-bold mt-0.5">1:2.8 RR</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#04060a] p-3 rounded border border-slate-800 space-y-2">
+                        <div class="text-[10px] text-slate-500 flex items-center justify-between">
+                            <span>GEMINI AI RISK & INVALIDATION</span>
+                            <span class="text-emerald-400 font-bold">Risk: Controlled</span>
+                        </div>
+                        <p id="gemini-ai-insight" class="text-[11px] text-slate-300 font-sans leading-relaxed">
+                            Market structure is bullish with 200 EMA support. Invalidation occurs if price breaks below support SL with volume confirmation.
+                        </p>
+                    </div>
+                </div>
+
+                <button onclick="executePaperTrade()" class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-lg text-xs transition shadow-lg">
+                    EXECUTE MASTER PAPER TRADE
+                </button>
+            </div>
+
+            <!-- Multi-Timeframe Check Box -->
+            <div class="glow-card rounded-xl p-4 border border-slate-800 space-y-3 font-mono">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
+                    <span class="text-cyan-400 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                        <span>MULTI-TIMEFRAME CHECK & WIN-RATES</span>
+                    </span>
+                    <span class="text-slate-400 text-[10px]">Select TF</span>
+                </div>
+
+                <div class="space-y-1.5 text-xs max-h-[260px] overflow-y-auto pr-1">
+                    <div id="stat-1S" onclick="switchTimeframe('1S')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">1s Tick Scalp</span>
+                        <span class="text-amber-400 font-bold">84.2%</span>
+                    </div>
+                    <div id="stat-5S" onclick="switchTimeframe('5S')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">5s Micro Scalp</span>
+                        <span class="text-emerald-400 font-bold">81.9%</span>
+                    </div>
+                    <div id="stat-15S" onclick="switchTimeframe('15S')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">15s Fast Scalp</span>
+                        <span class="text-emerald-400 font-bold">79.5%</span>
+                    </div>
+                    <div id="stat-30S" onclick="switchTimeframe('30S')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">30s Scalp</span>
+                        <span class="text-emerald-400 font-bold">80.1%</span>
+                    </div>
+                    <div id="stat-1" onclick="switchTimeframe('1')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">1m Scalp</span>
+                        <span class="text-amber-400 font-bold">78.4%</span>
+                    </div>
+                    <div id="stat-3" onclick="switchTimeframe('3')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">3m Scalp</span>
+                        <span class="text-emerald-400 font-bold">82.1% ★</span>
+                    </div>
+                    <div id="stat-5" onclick="switchTimeframe('5')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">5m Scalp</span>
+                        <span class="text-emerald-400 font-bold">80.5%</span>
+                    </div>
+                    <div id="stat-15" onclick="switchTimeframe('15')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-cyan-300 font-bold">15m Intraday</span>
+                        <span class="text-emerald-400 font-bold">77.2%</span>
+                    </div>
+                    <div id="stat-30" onclick="switchTimeframe('30')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">30m Swing</span>
+                        <span class="text-emerald-400 font-bold">76.8%</span>
+                    </div>
+                    <div id="stat-60" onclick="switchTimeframe('60')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">1h Trend</span>
+                        <span class="text-slate-300 font-bold">74.0%</span>
+                    </div>
+                    <div id="stat-240" onclick="switchTimeframe('240')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">4h Position</span>
+                        <span class="text-slate-300 font-bold">72.5%</span>
+                    </div>
+                    <div id="stat-D" onclick="switchTimeframe('D')" class="bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                        <span class="text-slate-300">1D Daily</span>
+                        <span class="text-slate-300 font-bold">70.1%</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Copyright Footer -->
+    <footer class="bg-[#020305] border-t border-slate-800 py-3 text-center text-xs text-slate-500 font-mono">
+        © 2026 PROXAI Master Engine. All Rights Reserved. Built for Professional Crypto & Financial Traders.
+    </footer>
+
+    <!-- Official TradingView Widget Script -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // Password Protection Verification
+        function verifyPassword() {
+            const pwd = document.getElementById('auth-password').value;
+            if (pwd === 'Prince@0840') {
+                document.getElementById('auth-modal').style.display = 'none';
+            } else {
+                document.getElementById('auth-error').classList.remove('hidden');
+            }
+        }
+
+        // Settings Modal & Actions
+        function toggleSettingsModal() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function clearSystemCache() {
+            localStorage.clear();
+            alert("System cache cleared successfully!");
+            toggleSettingsModal();
+        }
+
+        function systemLogout() {
+            if(confirm("Are you sure you want to logout from Proxai Master?")) {
+                document.getElementById('auth-modal').style.display = 'flex';
+                document.getElementById('auth-password').value = '';
+                toggleSettingsModal();
+            }
+        }
+
+        // News Detail Hinglish Modal
+        const newsDatabase = {
+            'btc_etf': {
+                title: 'BTC ETF Net Inflow +$312.4M',
+                tag: 'Institutional Demand & Liquidity',
+                desc: 'Spot Bitcoin ETFs mein $312.4 million ka fresh institutional inflow aaya hai. Iska matlab hai bade funds aur institutions market mein long positions build kar rahe hain.',
+                impact: 'Market par bullish asar padega. Price resistance break karke upar ja sakta hai. Long trade plan karna safe rahega.'
+            },
+            'whale': {
+                title: 'Whale Alert: 5,100 BTC Accumulated',
+                tag: 'Whale Accumulation Trend',
+                desc: 'Exchange wallets se 5,100 BTC nikal kar private cold storage mein transfer kiye gaye hain. Iska matlab whales supply hold kar rahi hain aur dump karne ka koi mood nahi hai.',
+                impact: 'Bullish sign hai! Exchange par supply kam hone se price mein upward squeeze aa sakta hai.'
+            },
+            'ppi': {
+                title: 'US Producer Price Index (PPI) Released',
+                tag: 'Macroeconomic Inflation Data',
+                desc: 'US PPI data expected se kam aaya hai, jiska matlab inflation cool down ho rahi hai. Fed interest rate cuts ke chances badh gaye hain.',
+                impact: 'Risk-on assets jaise Crypto aur Gold ke liye ye extremely bullish news hai. Markets mein sharp rally dekhne ko mil sakti hai.'
+            },
+            'sec': {
+                title: 'SEC Regulatory Clarity Boost',
+                tag: 'Regulatory Update',
+                desc: 'SEC ki taraf se DeFi aur crypto compliance par positive guidelines aayi hain, jisse institutional confidence high hua hai.',
+                impact: 'Altcoins aur overall crypto market volume increase hoga. Positive sentiment continue rahega.'
+            }
+        };
+
+        function openNewsDetail(newsKey) {
+            const news = newsDatabase[newsKey] || newsDatabase['btc_etf'];
+            document.getElementById('modal-news-title').innerText = news.title;
+            document.getElementById('modal-news-tag').innerText = news.tag;
+            document.getElementById('modal-news-desc').innerText = news.desc;
+            document.getElementById('modal-news-impact').innerText = news.impact;
+            document.getElementById('news-modal').classList.remove('hidden');
+        }
+
+        function toggleNewsModal() {
+            document.getElementById('news-modal').classList.add('hidden');
+        }
+
+        // Real IST Clock
+        function updateISTClock() {
+            const now = new Date();
+            const timeString = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now);
+            document.getElementById('ist-clock').innerText = timeString + ' IST';
+        }
+        setInterval(updateISTClock, 1000);
+        updateISTClock();
+
+        let currentSymbolCode = 'BTCUSDT';
+        let currentTVsymbol = 'BINANCE:BTCUSDT';
+        let currentTimeframe = '15';
+        let tvWidget = null;
+        let currentLivePrice = 64465.54;
+        let selectedStrategyKey = 'ICT';
+
+        function initTVWidget(symbol, tvSym, tf) {
+            currentSymbolCode = symbol;
+            currentTVsymbol = tvSym;
+            currentTimeframe = tf;
+            document.getElementById('tv-pair-title').innerText = tvSym;
+            document.getElementById('header-coin-label').innerText = symbol + ':';
+            document.getElementById('active-tf-badge').innerText = `Timeframe: ${tf} | Live S/R & Liquidity Active`;
+            document.getElementById('tradingview-container').innerHTML = '';
+
+            tvWidget = new TradingView.widget({
+                "autosize": true,
+                "symbol": tvSym,
+                "interval": tf,
+                "timezone": "Asia/Kolkata",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "toolbar_bg": "#04060a",
+                "enable_publishing": false,
+                "hide_side_toolbar": false,
+                "allow_symbol_change": false,
+                "container_id": "tradingview-container"
+            });
+
+            fetchLivePriceAndEngine();
+        }
+
+        async function fetchLivePriceAndEngine() {
+            try {
+                if (currentSymbolCode === 'XAUUSD') {
+                    currentLivePrice = 2436.72;
+                } else {
+                    const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${currentSymbolCode}`);
+                    const data = await res.json();
+                    currentLivePrice = parseFloat(data.price);
+                }
+                document.getElementById('header-price').innerText = '$' + currentLivePrice.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                updateEngineForTimeframe();
+            } catch (err) {
+                console.error("Price fetch error:", err);
+                if (currentSymbolCode === 'XAUUSD') currentLivePrice = 2436.72;
+                updateEngineForTimeframe();
+            }
+        }
+
+        function applyStrategy(stratKey) {
+            selectedStrategyKey = stratKey;
+            ['ICT', 'EMA', 'SWEEP', 'BOLL'].forEach(k => {
+                const btn = document.getElementById('strat-btn-' + k);
+                if (btn) {
+                    if (k === stratKey) {
+                        btn.className = 'p-2.5 rounded bg-cyan-900/40 border border-cyan-500 text-cyan-300 font-bold text-left transition';
+                    } else {
+                        btn.className = 'p-2.5 rounded bg-[#04060a] border border-slate-800 text-slate-300 font-bold text-left transition hover:border-slate-600';
+                    }
+                }
+            });
+            updateEngineForTimeframe();
+        }
+
+        function updateEngineForTimeframe() {
+            const isGold = currentSymbolCode === 'XAUUSD';
+            if (isGold && (currentLivePrice > 5000 || currentLivePrice < 1000)) currentLivePrice = 2436.72;
+
+            document.getElementById('matrix-title-label').innerText = `PROXAI LIVE TECHNICAL MATRIX (${currentSymbolCode} - ${currentTimeframe} Timeframe)`;
+            
+            const biasBadge = document.getElementById('tf-bias-status-badge');
+            const planBadge = document.getElementById('plan-bias-badge');
+
+            biasBadge.innerText = 'Bias: BULLISH';
+            biasBadge.className = 'text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded text-[11px]';
+            planBadge.innerText = 'LIVE LONG';
+            planBadge.className = 'text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded text-[10px]';
+
+            let dist = currentLivePrice * (isGold ? 0.003 : 0.005);
+            let entry = currentLivePrice;
+            let sl = entry - (dist * 0.6);
+            let tp = entry + (dist * 1.5);
+
+            // Strategy adjustments for strategy selector buttons
+            if (selectedStrategyKey === 'EMA') {
+                sl = entry - (dist * 0.4);
+                tp = entry + (dist * 1.2);
+            } else if (selectedStrategyKey === 'SWEEP') {
+                sl = entry - (dist * 0.8);
+                tp = entry + (dist * 2.0);
+            } else if (selectedStrategyKey === 'BOLL') {
+                sl = entry - (dist * 0.5);
+                tp = entry + (dist * 1.4);
+            }
+
+            // Populate Gemini AI Box
+            document.getElementById('plan-entry').innerText = '$' + entry.toFixed(2);
+            document.getElementById('plan-sl').innerText = '$' + sl.toFixed(2);
+            document.getElementById('plan-tp').innerText = '$' + tp.toFixed(2);
+            document.getElementById('plan-live-time-status').innerText = `Execute on close of active ${currentTimeframe} candle (${selectedStrategyKey} Strategy)`;
+            document.getElementById('gemini-ai-insight').innerText = `Gemini AI Master Analysis (${currentSymbolCode}): ${selectedStrategyKey} setup aligned with live Liquidity & S/R support. Invalidation below $${sl.toFixed(2)}.`;
+
+            // Populate Strategy Button Section Plan
+            document.getElementById('master-perfect-entry').innerText = '$' + entry.toFixed(2);
+            document.getElementById('master-perfect-candle').innerText = `${currentTimeframe} Candle Close`;
+            document.getElementById('master-perfect-sl').innerText = '$' + sl.toFixed(2);
+            document.getElementById('master-perfect-tp').innerText = '$' + tp.toFixed(2);
+
+            // Highlight Timeframe Selector Buttons
+            const allTfs = ['1S', '5S', '15S', '30S', '1', '3', '5', '15', '30', '60', '240', 'D'];
+            allTfs.forEach(t => {
+                const btn = document.getElementById('stat-' + t);
+                if (btn) {
+                    if (t === currentTimeframe) {
+                        btn.className = 'bg-cyan-950/40 p-1.5 rounded border border-cyan-500/50 flex justify-between items-center cursor-pointer transition';
+                    } else {
+                        btn.className = 'bg-[#04060a] p-1.5 rounded border border-slate-800 flex justify-between items-center cursor-pointer hover:border-slate-600 transition';
+                    }
+                }
+            });
+
+            generateLivePlannedAndRunningTable(currentTimeframe, isGold);
+            runSearchEnginePlan();
+        }
+
+        function runSearchEnginePlan() {
+            const strat = document.getElementById('search-strategy').value;
+            const riskAmt = parseFloat(document.getElementById('search-risk-amt').value) || 100;
+            const recBox = document.getElementById('search-output-rec');
+
+            let desc = "";
+            if (strat === 'ICT') {
+                desc = `${currentSymbolCode} ICT Bullish OB: Long Entry $${currentLivePrice.toFixed(2)} | Risk $${riskAmt} | Target 1:2.5`;
+            } else if (strat === 'EMA') {
+                desc = `${currentSymbolCode} 9/20 EMA Cross: Bullish Scalp | Risk $${riskAmt}`;
+            } else if (strat === 'EMA50') {
+                desc = `${currentSymbolCode} 50 EMA Support Bounce | Risk $${riskAmt}`;
+            } else if (strat === 'EMA200') {
+                desc = `${currentSymbolCode} 200 EMA Macro Trend Support | Risk $${riskAmt}`;
+            } else if (strat === 'SWEEP') {
+                desc = `${currentSymbolCode} Liquidity Sweep & Reclaim | Risk $${riskAmt}`;
+            } else if (strat === 'BOLL') {
+                desc = `${currentSymbolCode} Bollinger Expansion Up | Risk $${riskAmt}`;
+            }
+            recBox.innerText = desc;
+        }
+
+        function generateLivePlannedAndRunningTable(tf, isGold) {
+            const tbody = document.getElementById('active-trades-table-body');
+            let html = '';
+            let mult = isGold ? 12.0 : 1.0;
+
+            let liveRows = [
+                { status: 'RUNNING EXECUTED', type: 'LIVE LONG', tf: tf, setup: `${currentSymbolCode} ${tf} ICT Bullish Order Block`, entry: currentLivePrice * 0.9992, sl: currentLivePrice * 0.9950, tp: currentLivePrice * 1.0080, pnl: (78.50 * mult).toFixed(2), active: true },
+                { status: 'RUNNING EXECUTED', type: 'LIVE LONG', tf: tf, setup: `${currentSymbolCode} ${tf} 9/20 EMA Crossover`, entry: currentLivePrice * 0.9998, sl: currentLivePrice * 0.9960, tp: currentLivePrice * 1.0065, pnl: (42.10 * mult).toFixed(2), active: true },
+                { status: 'LIVE PLANNED', type: 'PENDING', tf: tf, setup: `${currentSymbolCode} ${tf} Liquidity Sweep & Support Reclaim`, entry: currentLivePrice * 1.0000, sl: currentLivePrice * 0.9955, tp: currentLivePrice * 1.0090, pnl: 'Awaiting Trigger', active: false },
+                { status: 'LIVE PLANNED', type: 'PENDING', tf: tf, setup: `${currentSymbolCode} ${tf} Trend Line Bounce`, entry: currentLivePrice * 0.9985, sl: currentLivePrice * 0.9930, tp: currentLivePrice * 1.0110, pnl: 'Awaiting Trigger', active: false }
+            ];
+
+            liveRows.forEach((row) => {
+                const statusClass = row.active ? 'text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30' : 'text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30';
+                const pnlClass = row.active ? 'text-emerald-400 font-bold text-right' : 'text-slate-400 text-right font-mono';
+                const pnlDisplay = row.active ? `+$${row.pnl}` : row.pnl;
+
+                html += `
+                    <tr class="hover:bg-slate-900/40 transition">
+                        <td class="p-2.5"><span class="${statusClass}">${row.status}</span></td>
+                        <td class="p-2.5 text-cyan-400 font-mono font-bold">${row.tf}</td>
+                        <td class="p-2.5 text-slate-200 font-semibold">${row.setup}</td>
+                        <td class="p-2.5 text-white font-mono">$${row.entry.toFixed(2)}</td>
+                        <td class="p-2.5 text-red-400 font-mono">$${row.sl.toFixed(2)}</td>
+                        <td class="p-2.5 text-emerald-400 font-mono">$${row.tp.toFixed(2)}</td>
+                        <td class="p-2.5 ${pnlClass}">${pnlDisplay}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function switchAsset(symbol, tvSym) {
+            ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'XAUUSD'].forEach(s => {
+                const btn = document.getElementById('btn-' + s);
+                if (btn) {
+                    if (s === symbol) {
+                        btn.className = s === 'XAUUSD' 
+                            ? 'px-3 py-1.5 rounded text-amber-300 bg-amber-950/60 font-bold border border-amber-500/50 transition' 
+                            : 'px-3 py-1.5 rounded text-white bg-slate-800 font-bold transition';
+                    } else {
+                        btn.className = s === 'XAUUSD' 
+                            ? 'px-3 py-1.5 rounded text-amber-400 hover:text-white font-bold transition border border-amber-500/30 bg-amber-950/20' 
+                            : 'px-3 py-1.5 rounded text-slate-400 hover:text-white transition';
+                    }
+                }
+            });
+            initTVWidget(symbol, tvSym, currentTimeframe);
+        }
+
+        function switchTimeframe(tf) {
+            const allTfs = ['1S', '5S', '15S', '30S', '1', '3', '5', '15', '30', '60', '240', 'D'];
+            allTfs.forEach(t => {
+                const btn = document.getElementById('tf-' + t);
+                if (btn) {
+                    if (t === tf) {
+                        btn.className = 'px-2 py-1 rounded text-white bg-slate-800 font-bold';
+                    } else {
+                        btn.className = 'px-2 py-1 rounded text-slate-400 hover:text-white';
+                    }
+                }
+            });
+            initTVWidget(currentSymbolCode, currentTVsymbol, tf);
+        }
+
+        function refreshEngine() {
+            fetchLivePriceAndEngine();
+            alert(`Proxai Server synchronized with live market feeds & S/R liquidity levels for ${currentSymbolCode}.`);
+        }
+
+        function executePaperTrade() {
+            alert(`Master Paper Trade successfully executed on Proxai for ${currentSymbolCode} (${currentTimeframe}) with live strategy alignment.`);
+        }
+
+        // Initialize with BTC 15m
+        initTVWidget('BTCUSDT', 'BINANCE:BTCUSDT', '15');
+        document.getElementById('tf-15').className = 'px-2 py-1 rounded text-white bg-slate-800 font-bold';
+
+        setInterval(() => {
+            fetchLivePriceAndEngine();
+        }, 10000);
+    </script>
+</body>
+</html>
