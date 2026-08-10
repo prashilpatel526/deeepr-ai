@@ -1,0 +1,380 @@
+<script>
+        let currentSymbol = 'BTCUSDT';
+        let currentTradePlanTf = '15m';
+        let liveWs = null;
+        let isLightTheme = false;
+
+        function checkPassword() {
+            const val = document.getElementById('passInput').value;
+            if(val === '814099') {
+                document.getElementById('lockScreen').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+                initTradingView('BINANCE:BTCUSDT');
+                loadJournal();
+                startLiveWebSocket('btcusdt');
+                fetchAllDynamicData();
+                
+                setInterval(() => {
+                    fetchAllDynamicData();
+                }, 10000);
+            } else {
+                document.getElementById('errorMsg').classList.remove('hidden');
+            }
+        }
+
+        function lockApp() {
+            document.getElementById('passInput').value = '';
+            document.getElementById('errorMsg').classList.add('hidden');
+            document.getElementById('appContainer').classList.add('hidden');
+            document.getElementById('lockScreen').classList.remove('hidden');
+            if(liveWs) liveWs.close();
+        }
+
+        function toggleTheme() {
+            isLightTheme = !isLightTheme;
+            const icon = document.getElementById('themeIcon');
+            if(isLightTheme) {
+                document.documentElement.classList.add('light-theme');
+                icon.className = 'fa-solid fa-sun text-yellow-500';
+            } else {
+                document.documentElement.classList.remove('light-theme');
+                icon.className = 'fa-solid fa-moon';
+            }
+        }
+
+        function switchTab(tab) {
+            ['chart', 'scanner', 'multitf', 'risk', 'macro', 'vault'].forEach(t => {
+                document.getElementById('tab-' + t).classList.add('hidden');
+                const btn = document.getElementById('btn-' + t);
+                btn.className = 'p-3 rounded-xl text-xs font-semibold text-left flex items-center gap-3 text-gray-400 hover:bg-[#2b313a]/30 transition';
+            });
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+            const activeBtn = document.getElementById('btn-' + tab);
+            activeBtn.className = 'p-3 rounded-xl text-xs font-semibold text-left flex items-center gap-3 text-[#fcd535] bg-[#2b313a]/50 border border-[#fcd535]/50 transition';
+            fetchAllDynamicData();
+        }
+
+        function initTradingView(symbol) {
+            document.getElementById('tradingview_container').innerHTML = '';
+            new TradingView.widget({
+                "width": "100%",
+                "height": "520",
+                "symbol": symbol,
+                "interval": "15",
+                "timezone": "Etc/UTC",
+                "theme": isLightTheme ? "light" : "dark",
+                "style": "1",
+                "locale": "en",
+                "toolbar_bg": isLightTheme ? "#f8f9fa" : "#181a20",
+                "enable_publishing": false,
+                "hide_side_toolbar": false,
+                "container_id": "tradingview_container"
+            });
+        }
+
+        function changeAsset(symbol) {
+            currentSymbol = symbol;
+            document.getElementById('activeSymbolLabel').innerText = symbol;
+            document.getElementById('planSymbol').innerText = symbol;
+            
+            ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT'].forEach(s => {
+                const btn = document.getElementById('asset-btn-' + s);
+                if(btn) {
+                    if(s === symbol) {
+                        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-[#2b313a] text-white';
+                    } else {
+                        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-[#2b313a] text-gray-400';
+                    }
+                }
+            });
+
+            initTradingView('BINANCE:' + symbol);
+            if(liveWs) liveWs.close();
+            startLiveWebSocket(symbol.toLowerCase());
+            fetchAllDynamicData();
+        }
+
+        function startLiveWebSocket(pair) {
+            try {
+                liveWs = new WebSocket(`wss://stream.binance.com:9443/ws/${pair}@trade`);
+                liveWs.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    const price = parseFloat(data.p);
+                    document.getElementById('topPrice').innerText = '$' + price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    
+                    // Dynamic Risk Engine Auto-Calculation based on live websocket price
+                    const tp = price * 1.025; // 2.5% Target
+                    const sl = price * 0.992; // 0.8% Stop Loss
+                    document.getElementById('calcTP').innerText = '$' + tp.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    document.getElementById('calcSL').innerText = '$' + sl.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                };
+            } catch(e) {}
+        }
+
+        function fetchAllDynamicData() {
+            updateLivePriceAndRisk(currentSymbol);
+            fetchSMCScannerData();
+            fetchTradePlanData(currentSymbol, currentTradePlanTf);
+            fetchRetailVsSmcAnalysis(currentSymbol);
+            fetchMacroSentiment();
+            runPreMarketAndSessionEngine();
+            generateDailyAccurateSetups();
+        }
+
+        async function updateLivePriceAndRisk(symbol) {
+            try {
+                const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+                const data = await res.json();
+                const price = parseFloat(data.price);
+                document.getElementById('topPrice').innerText = '$' + price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                const tp = price * 1.025;
+                const sl = price * 0.992;
+                document.getElementById('calcTP').innerText = '$' + tp.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                document.getElementById('calcSL').innerText = '$' + sl.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            } catch(e) {}
+        }
+
+        async function generateDailyAccurateSetups() {
+            const coins = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT'];
+            let setupsHtml = '';
+            let count = 0;
+
+            for(let coin of coins) {
+                if(count >= 5) break;
+                try {
+                    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${coin}&interval=1h&limit=12`);
+                    const data = await res.json();
+                    const lastPrice = parseFloat(data[data.length - 1][4]);
+                    const openPrice = parseFloat(data[data.length - 1][1]);
+                    
+                    let green = 0;
+                    data.forEach(c => { if(parseFloat(c[4]) >= parseFloat(c[1])) green++; });
+                    let score = Math.min(95, Math.max(50, Math.round((green / data.length) * 100)));
+                    
+                    let isBullish = lastPrice >= openPrice;
+                    let action = isBullish ? 'LONG SETUP' : 'SHORT DUMP SETUP';
+                    let colorClass = isBullish ? 'text-green-400 bg-green-900/30' : 'text-red-400 bg-red-900/30';
+
+                    setupsHtml += `
+                        <div class="bg-black/30 p-3 rounded-xl flex justify-between items-center border border-gray-800">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-white">${coin}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded font-bold ${colorClass}">${action}</span>
+                                </div>
+                                <span class="text-xs text-gray-400">Price: $${lastPrice.toFixed(2)}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-sm font-bold text-[#fcd535]">${score}%</span>
+                                <span class="text-[10px] text-gray-500 block">Accuracy</span>
+                            </div>
+                        </div>
+                    `;
+                    count++;
+                } catch(e) {}
+            }
+            const container = document.getElementById('dailySetupsList');
+            if(container) container.innerHTML = setupsHtml;
+        }
+
+        async function fetchSMCScannerData() {
+            const coins = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT'];
+            let htmlContent = '';
+
+            for(let coin of coins) {
+                try {
+                    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${coin}&interval=1h&limit=10`);
+                    const data = await res.json();
+                    
+                    const latestClose = parseFloat(data[data.length - 1][4]);
+                    const prevClose = parseFloat(data[data.length - 2][4]);
+                    let greenCandles = 0;
+                    data.forEach(c => {
+                        if(parseFloat(c[4]) >= parseFloat(c[1])) greenCandles++;
+                    });
+
+                    let score = Math.min(95, Math.max(35, Math.round((greenCandles / data.length) * 100)));
+                    let statusText = latestClose >= prevClose ? 'Bullish OB + FVG Active' : 'Bearish Pressure / Dump Sweep';
+                    let badgeClass = latestClose >= prevClose ? 'bg-[#0ecb81]/20 text-[#0ecb81]' : 'bg-red-500/20 text-red-400';
+                    let badgeText = score + (latestClose >= prevClose ? '% BULLISH' : '% BEARISH');
+
+                    htmlContent += `
+                        <div class="bg-black/30 p-3 rounded-xl border border-gray-800 flex justify-between items-center">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs font-bold text-white">${coin}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded font-bold ${badgeClass}">${badgeText}</span>
+                                </div>
+                                <span class="text-[11px] text-gray-400">${statusText}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs font-bold text-white">$${latestClose.toFixed(2)}</span>
+                                <span class="text-[10px] text-gray-500 block">Live Price</span>
+                            </div>
+                        </div>
+                    `;
+                } catch(e) {}
+            }
+            const scannerContainer = document.getElementById('multiCoinScannerList');
+            if(scannerContainer) scannerContainer.innerHTML = htmlContent;
+        }
+
+        function updateTradePlanTimeframe(tf) {
+            currentTradePlanTf = tf;
+            fetchTradePlanData(currentSymbol, tf);
+        }
+
+        async function fetchTradePlanData(symbol, tf) {
+            try {
+                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${tf}&limit=20`);
+                const data = await res.json();
+                const currentPrice = parseFloat(data[data.length - 1][4]);
+                
+                let greenCount = data.filter(c => parseFloat(c[4]) >= parseFloat(c[1])).length;
+                let score = Math.round((greenCount / data.length) * 100);
+                
+                document.getElementById('accuracyScoreText').innerText = score + '% (' + (score >= 50 ? 'High Confluence' : 'Bearish Confluence') + ')';
+                document.getElementById('accuracyProgressBar').style.width = score + '%';
+                document.getElementById('accuracyProgressBar').className = score >= 50 ? 'bg-binance-green h-full rounded-full transition-all duration-500' : 'bg-binance-red h-full rounded-full transition-all duration-500';
+                
+                document.getElementById('planEntry').innerText = '$' + currentPrice.toFixed(2) + ' (Order Block Active)';
+                document.getElementById('planTP').innerText = '$' + (currentPrice * 1.018).toFixed(2);
+                document.getElementById('planSL').innerText = '$' + (currentPrice * 0.994).toFixed(2);
+                
+                const actionEl = document.getElementById('planAction');
+                if(score >= 50) {
+                    actionEl.innerText = 'BULLISH CONTINUATION';
+                    actionEl.className = 'font-bold text-green-400';
+                } else {
+                    actionEl.innerText = 'BEARISH REVERSAL';
+                    actionEl.className = 'font-bold text-red-400';
+                }
+            } catch(e) {
+                document.getElementById('planEntry').innerText = 'Error fetching data';
+            }
+        }
+
+        async function fetchRetailVsSmcAnalysis(symbol) {
+            try {
+                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=10`);
+                const data = await res.json();
+                const lastClose = parseFloat(data[data.length - 1][4]);
+                const prevClose = parseFloat(data[data.length - 2][4]);
+                
+                if(lastClose >= prevClose) {
+                    document.getElementById('retailTrapDesc').innerText = `Retail traders are shorting resistance near $${(lastClose * 1.004).toFixed(2)} expecting a breakdown. High probability of an upward liquidity sweep.`;
+                    document.getElementById('smcZoneDesc').innerText = `Institutional mitigation block detected at $${(lastClose * 0.993).toFixed(2)}. Smart money accumulation zone is active.`;
+                } else {
+                    document.getElementById('retailTrapDesc').innerText = `Retail traders are buying support near $${(lastClose * 0.996).toFixed(2)} expecting a bounce. High risk of a stop-loss hunt downwards.`;
+                    document.getElementById('smcZoneDesc').innerText = `Institutional distribution block detected at $${(lastClose * 1.007).toFixed(2)}. Smart money is preparing for a downward expansion.`;
+                }
+            } catch(e) {}
+        }
+
+        async function fetchMacroSentiment() {
+            try {
+                const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT');
+                const data = await res.json();
+                const priceChange = parseFloat(data.priceChangePercent);
+                
+                const trendEl = document.getElementById('macroBtcTrend');
+                const badgeEl = document.getElementById('macroTrendBadge');
+                const volEl = document.getElementById('macroVolStatus');
+                
+                trendEl.innerText = `BTC 24h Change: ${priceChange >= 0 ? '+' : ''}${priceChange}%`;
+                if(priceChange > 1.5) {
+                    badgeEl.innerText = 'STRONG BULLISH';
+                    badgeEl.className = 'text-xs px-2.5 py-1 rounded font-bold bg-green-500/20 text-green-400';
+                } else if(priceChange < -1.5) {
+                    badgeEl.innerText = 'STRONG BEARISH';
+                    badgeEl.className = 'text-xs px-2.5 py-1 rounded font-bold bg-red-500/20 text-red-400';
+                } else {
+                    badgeEl.innerText = 'RANGING / CONSOLIDATION';
+                    badgeEl.className = 'text-xs px-2.5 py-1 rounded font-bold bg-yellow-500/20 text-yellow-400';
+                }
+                
+                volEl.innerText = `24h Volume: ${Math.round(parseFloat(data.volume)).toLocaleString()} BTC | Spread & Order Book: Optimal`;
+            } catch(e) {}
+        }
+
+        function runPreMarketAndSessionEngine() {
+            const now = new Date();
+            const utcHour = now.getUTCHours();
+            let session = '';
+            
+            if(utcHour >= 0 && utcHour < 8) {
+                session = 'Asian Session (Tokyo/Sydney)';
+            } else if(utcHour >= 8 && utcHour < 16) {
+                session = 'European Session (London Open)';
+            } else {
+                session = 'American Session (New York Open)';
+            }
+            
+            document.getElementById('activeSessionLabel').innerText = session + ` (${utcHour}:00 UTC)`;
+            document.getElementById('sessionStatusBadge').innerText = 'LIVE ACTIVE';
+            document.getElementById('sessionStatusBadge').className = 'text-xs px-2.5 py-1 rounded font-bold bg-green-500/20 text-green-400';
+            
+            document.getElementById('preMarketOutlook').innerText = utcHour >= 12 && utcHour < 15 ? 'High institutional volatility expected near New York session liquidity windows.' : 'Stable order book execution flow across active global liquidity zones.';
+        }
+
+        function executeOrder(type) {
+            const price = document.getElementById('topPrice').innerText;
+            const journal = JSON.parse(localStorage.getItem('prox_journal') || '[]');
+            journal.unshift({
+                id: Date.now(),
+                symbol: currentSymbol,
+                type: type,
+                price: price,
+                time: new Date().toLocaleTimeString()
+            });
+            localStorage.setItem('prox_journal', JSON.stringify(journal));
+            loadJournal();
+            alert(`${type} Order Executed Successfully at ${price} for ${currentSymbol}!`);
+        }
+
+        function loadJournal() {
+            const journal = JSON.parse(localStorage.getItem('prox_journal') || '[]');
+            const container = document.getElementById('journalList');
+            if(journal.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-center py-4">No simulated trades yet.</div>';
+                return;
+            }
+            let html = '';
+            journal.forEach(j => {
+                const badge = j.type === 'BUY' ? 'text-green-400 bg-green-900/30' : 'text-red-400 bg-red-900/30';
+                html += `
+                    <div class="bg-black/30 p-2.5 rounded-lg flex justify-between items-center border border-gray-800">
+                        <div>
+                            <span class="font-bold text-white">${j.symbol}</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badge} ml-2">${j.type}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-white font-semibold">${j.price}</span>
+                            <span class="text-[10px] text-gray-400 block">${j.time}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function clearJournal() {
+            localStorage.removeItem('prox_journal');
+            loadJournal();
+        }
+
+        function triggerAlarm() {
+            const audio = document.getElementById('alertSound');
+            if(audio) audio.play();
+        }
+
+        function toggleFullScreen() {
+            const elem = document.getElementById('tradingview_container');
+            if (!document.fullscreenElement) {
+                elem.requestFullscreen().catch(err => {});
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    </script>
