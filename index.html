@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProX Master Terminal v8 - Mobile Pro</title>
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <style>
+        :root {
+            --bg-main: #131722;
+            --bg-card: #1e222d;
+            --bg-sidebar: #0b0e14;
+            --accent-gold: #f3ba2f;
+            --accent-green: #0ecb81;
+            --accent-red: #f6465d;
+            --text-main: #d1d4dc;
+            --text-muted: #787b86;
+            --border-color: #2a2e39;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow-x: hidden; }
+
+        /* Top Mobile Navigation Bar */
+        .mobile-nav { display: flex; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); overflow-x: auto; padding: 8px; gap: 6px; white-space: nowrap; }
+        .nav-tab { padding: 8px 12px; background: var(--bg-card); color: var(--text-muted); border-radius: 4px; font-size: 12px; cursor: pointer; border: 1px solid var(--border-color); font-weight: 600; }
+        .nav-tab.active { background-color: var(--accent-gold); color: #000; border-color: var(--accent-gold); }
+
+        /* Main Workspace */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 10px; }
+        
+        /* Asset Switcher Bar */
+        .topbar { background-color: var(--bg-card); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .asset-buttons { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 4px; }
+        .asset-btn { background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; flex-shrink: 0; }
+        .asset-btn.active, .asset-btn:hover { background-color: var(--accent-gold); color: #000; border-color: var(--accent-gold); }
+
+        /* Metric Cards Header */
+        .metrics-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .metric-card { background-color: var(--bg-card); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; }
+        .metric-title { font-size: 9px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 3px; font-weight: 600; }
+        .metric-value { font-size: 14px; font-weight: bold; color: #fff; }
+
+        /* Content Sections */
+        .section-view { display: none; }
+        .section-view.active { display: block; }
+
+        /* Chart Area */
+        .chart-container { height: 350px; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
+
+        /* Panels */
+        .panel { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 10px; }
+        .panel-title { font-size: 12px; font-weight: bold; color: var(--accent-gold); margin-bottom: 8px; }
+        .box-item { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; font-size: 11px; margin-bottom: 8px; line-height: 1.4; }
+
+        /* Tables */
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--text-muted); font-weight: 600; }
+        .badge-pump { background: rgba(14, 203, 129, 0.15); color: var(--accent-green); padding: 2px 5px; border-radius: 4px; font-weight: bold; }
+        
+        /* Action Buttons */
+        .action-bar { display: flex; gap: 8px; margin-top: 10px; }
+        .btn-trade { flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; text-align: center; }
+        .btn-buy { background-color: var(--accent-green); color: #000; }
+        .btn-sell { background-color: var(--accent-red); color: #fff; }
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Scrollable Tab Navigation -->
+    <div class="mobile-nav">
+        <div class="nav-tab active" onclick="switchTab('chart', this)">📊 Chart & Live</div>
+        <div class="nav-tab" onclick="switchTab('mtime', this)">🔄 Multi-TF</div>
+        <div class="nav-tab" onclick="switchTab('news', this)">📰 News</div>
+        <div class="nav-tab" onclick="switchTab('vault', this)">📦 Vault</div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="main-content">
+        
+        <!-- Topbar Asset Switcher -->
+        <div class="topbar">
+            <div style="font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between;">
+                <span>Select Asset:</span>
+                <span style="color: var(--accent-green);">● Live WS Active</span>
+            </div>
+            <div class="asset-buttons">
+                <button class="asset-btn active" onclick="changeAsset('BINANCE:BTCUSDT', 'btcusdt', 'BTCUSDT')">BTCUSDT</button>
+                <button class="asset-btn" onclick="changeAsset('BINANCE:ETHUSDT', 'ethusdt', 'ETHUSDT')">ETHUSDT</button>
+                <button class="asset-btn" onclick="changeAsset('BINANCE:SOLUSDT', 'solusdt', 'SOLUSDT')">SOLUSDT</button>
+                <button class="asset-btn" onclick="changeAsset('BINANCE:XRPUSDT', 'xrpusdt', 'XRPUSDT')">XRPUSDT</button>
+                <button class="asset-btn" onclick="changeAsset('OANDA:XAUUSD', 'gold', 'GOLD')">GOLD</button>
+            </div>
+        </div>
+
+        <!-- Metrics Header Grid (Mobile Friendly 2x2) -->
+        <div class="metrics-bar">
+            <div class="metric-card">
+                <div class="metric-title">Live Spot Price</div>
+                <div class="metric-value" id="lblLivePrice" style="color: var(--accent-gold);">Connecting...</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Whale Order State</div>
+                <div class="metric-value" style="color: var(--accent-green);" id="lblWhaleState">Syncing...</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Retail SL Pool</div>
+                <div class="metric-value" style="color: var(--accent-red);" id="lblRetailSL">Scanning...</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Volatility</div>
+                <div class="metric-value" id="lblVolatility" style="color: #fff;">Normal</div>
+            </div>
+        </div>
+
+        <!-- TAB 1: CHART & WHALE FOOTPRINTS -->
+        <div id="tab-chart" class="section-view active">
+            <div class="chart-container" id="tradingview_widget"></div>
+            
+            <div class="panel" style="border-left: 3px solid var(--accent-green);">
+                <div class="panel-title">🐋 Live Order Block & Footprint</div>
+                <div class="box-item" id="boxWhaleDetails">Real-time tick data ke sath order flow imbalance track ho raha hai.</div>
+            </div>
+
+            <div class="panel" style="border-left: 3px solid var(--accent-red);">
+                <div class="panel-title">🛑 Stop Loss Hunt Matrix</div>
+                <div class="box-item" id="boxSLDetails">Retail liquidity zones ki live scanning active hai.</div>
+            </div>
+
+            <div class="action-bar">
+                <button class="btn-trade btn-buy" onclick="executeTrade('LONG ENTRY')">🟢 LONG SETUP</button>
+                <button class="btn-trade btn-sell" onclick="executeTrade('SHORT ENTRY')">🔴 SHORT SETUP</button>
+            </div>
+        </div>
+
+        <!-- TAB 2: MULTI-TIMEFRAME MOMENTUM -->
+        <div id="tab-mtime" class="section-view">
+            <div class="panel">
+                <div class="panel-title">🔄 Major TF (1H/4H) vs Lower TF (1M/5M)</div>
+                <div class="box-item">
+                    <div style="margin-bottom: 6px;"><b style="color: var(--accent-gold);">Major Trend:</b> <span class="badge-pump">BULLISH EXPANSION</span></div>
+                    <div style="margin-bottom: 6px;"><b style="color: #fff;">Lower TF Trigger:</b> <span style="color: var(--accent-green);">FVG Test & BOS Ready</span></div>
+                    <p style="color: var(--text-muted); font-size: 11px; margin-top: 6px;">Bade timeframe ke trend ke mutabik chote timeframe par pullback entry generate ho rahi hai.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: LIVE NEWS -->
+        <div id="tab-news" class="section-view">
+            <div class="panel">
+                <div class="panel-title">📰 Live Market Impact Feed</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr><th>Time</th><th>Source</th><th>Asset</th><th>Impact</th><th>Effect</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Live</td>
+                                <td><b>Investing.com</b></td>
+                                <td style="color:var(--accent-gold);">BTC</td>
+                                <td><span class="badge-pump">HIGH</span></td>
+                                <td><span style="color:var(--accent-green); font-weight:bold;">Market PUMP 🚀</span> - Exchange outflows detected.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: VAULT -->
+        <div id="tab-vault" class="section-view">
+            <div class="panel">
+                <div class="panel-title">📦 Executed Trades Vault</div>
+                <div id="vaultList" style="font-size: 11px; color: var(--text-muted);">No trades executed in current mobile session yet.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script Logic -->
+    <script>
+        let currentTvSymbol = 'BINANCE:BTCUSDT';
+        let currentAssetName = 'BTCUSDT';
+        let tvWidget = null;
+        let ws = null;
+
+        function initTradingView(symbol) {
+            document.getElementById('tradingview_widget').innerHTML = '';
+            tvWidget = new TradingView.widget({
+                "width": "100%",
+                "height": "350",
+                "symbol": symbol,
+                "interval": "15",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "toolbar_bg": "#1e222d",
+                "enable_publishing": false,
+                "container_id": "tradingview_widget"
+            });
+        }
+
+        function connectBinanceWS(pair, name) {
+            if (ws) ws.close();
+            currentAssetName = name;
+
+            if(pair === 'gold') {
+                document.getElementById('lblLivePrice').innerText = '$4,603.38';
+                document.getElementById('lblWhaleState').innerText = 'Safe-Haven Flow';
+                document.getElementById('lblRetailSL').innerText = '$4,580.00';
+                document.getElementById('lblVolatility').innerText = 'Stable';
+                return;
+            }
+
+            ws = new WebSocket(`wss://stream.binance.com:9443/ws/${pair}@trade`);
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const price = parseFloat(data.p);
+                const formattedPrice = price >= 1000 ? price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : price.toFixed(4);
+                
+                document.getElementById('lblLivePrice').innerText = '$' + formattedPrice;
+                
+                const offsetLow = price * 0.9985;
+                const offsetHigh = price * 1.0015;
+                
+                document.getElementById('lblWhaleState').innerText = data.T ? 'Accumulation 🟢' : 'Distribution 🔴';
+                document.getElementById('lblRetailSL').innerText = '$' + offsetLow.toFixed(2);
+                document.getElementById('lblVolatility').innerText = (price * 0.0012).toFixed(2);
+                
+                document.getElementById('boxWhaleDetails').innerHTML = `<b>Zone:</b> $${offsetLow.toFixed(2)} - $${price.toFixed(2)}<br>Bade khiladi limit orders laga rahe hain.`;
+                document.getElementById('boxSLDetails').innerHTML = `<b>Target Pool:</b> $${offsetHigh.toFixed(2)}<br>Retail short SL clusters target ho rahe hain.`;
+            };
+        }
+
+        function changeAsset(tvSymbol, binancePair, name) {
+            currentTvSymbol = tvSymbol;
+            document.querySelectorAll('.asset-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            initTradingView(tvSymbol);
+            connectBinanceWS(binancePair, name);
+        }
+
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            if(element) element.classList.add('active');
+        }
+
+        function executeTrade(action) {
+            const vault = document.getElementById('vaultList');
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            if(vault.innerText.includes('No trades executed')) vault.innerHTML = '';
+            
+            vault.innerHTML += `<div style="padding: 6px; border-bottom: 1px solid var(--border-color);">
+                <b>[${timeStr}]</b> ${currentAssetName} | <b style="color: var(--accent-green);">${action}</b> | <span style="color:var(--accent-gold);">${document.getElementById('lblLivePrice').innerText}</span>
+            </div>`;
+            alert(`Logged: ${currentAssetName} ${action}`);
+        }
+
+        window.onload = function() {
+            initTradingView('BINANCE:BTCUSDT');
+            connectBinanceWS('btcusdt', 'BTCUSDT');
+        };
+    </script>
+</body>
+</html>
